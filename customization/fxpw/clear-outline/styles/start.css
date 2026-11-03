@@ -1,0 +1,19 @@
+.apps-menu {
+  background: transparent;
+  color: var(--fxpw-foreground);
+  text-shadow: var(--fxpw-text-outline);
+}
+
+.apps-menu[data-fullscreen="false"] {
+  box-shadow: none;
+}
+
+.apps-menu-header input[data-skin] {
+  background: transparent;
+  color: var(--fxpw-foreground);
+  text-shadow: var(--fxpw-text-outline);
+}
+
+.apps-menu :is(.app img, .folder img, .svg-icon) {
+  filter: var(--fxpw-icon-outline);
+}

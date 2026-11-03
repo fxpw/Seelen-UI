@@ -1,0 +1,10 @@
+.ft-bar {
+  background: transparent;
+  box-shadow: none;
+  color: var(--fxpw-foreground);
+  text-shadow: var(--fxpw-text-outline);
+}
+
+.ft-bar-item-content :is(img, svg, canvas) {
+  filter: var(--fxpw-icon-outline);
+}

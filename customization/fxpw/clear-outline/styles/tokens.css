@@ -1,0 +1,21 @@
+:root {
+  --fxpw-foreground: #ffffff;
+  --fxpw-outline: #000000;
+  --fxpw-outline-width: 1;
+  --fxpw-edge: calc(var(--fxpw-outline-width) * 1px);
+  --fxpw-negative-edge: calc(var(--fxpw-edge) * -1);
+  --fxpw-text-outline:
+    var(--fxpw-negative-edge) var(--fxpw-negative-edge) 0 var(--fxpw-outline),
+    0 var(--fxpw-negative-edge) 0 var(--fxpw-outline),
+    var(--fxpw-edge) var(--fxpw-negative-edge) 0 var(--fxpw-outline),
+    var(--fxpw-negative-edge) 0 0 var(--fxpw-outline),
+    var(--fxpw-edge) 0 0 var(--fxpw-outline),
+    var(--fxpw-negative-edge) var(--fxpw-edge) 0 var(--fxpw-outline),
+    0 var(--fxpw-edge) 0 var(--fxpw-outline),
+    var(--fxpw-edge) var(--fxpw-edge) 0 var(--fxpw-outline);
+  --fxpw-icon-outline:
+    drop-shadow(var(--fxpw-negative-edge) 0 0 var(--fxpw-outline))
+    drop-shadow(var(--fxpw-edge) 0 0 var(--fxpw-outline))
+    drop-shadow(0 var(--fxpw-negative-edge) 0 var(--fxpw-outline))
+    drop-shadow(0 var(--fxpw-edge) 0 var(--fxpw-outline));
+}

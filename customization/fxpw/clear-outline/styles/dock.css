@@ -1,0 +1,10 @@
+.taskbar {
+  background: transparent;
+  box-shadow: none;
+  color: var(--fxpw-foreground);
+  text-shadow: var(--fxpw-text-outline);
+}
+
+.taskbar :is(.weg-item-icon, .svg-icon, canvas) {
+  filter: var(--fxpw-icon-outline);
+}
