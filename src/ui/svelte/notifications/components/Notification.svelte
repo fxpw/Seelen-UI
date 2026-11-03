@@ -55,6 +55,12 @@
     }
   }
 
+  function handleAuxClick(e: MouseEvent) {
+    if (e.button !== 1) return;
+    e.preventDefault();
+    handleClose(e);
+  }
+
   function handleNotificationClick() {
     handleAction(notification.content["@launch"] ?? "", notification.content["@activationType"]);
   }
@@ -95,6 +101,8 @@
   role="button"
   tabindex="0"
   onclick={handleNotificationClick}
+  onauxclick={handleAuxClick}
+  onpointerdown={(e) => { if (e.button === 1) e.preventDefault(); }}
   onkeydown={(e) => {
     if (e.key === "Enter" || e.key === " ") {
       handleNotificationClick();

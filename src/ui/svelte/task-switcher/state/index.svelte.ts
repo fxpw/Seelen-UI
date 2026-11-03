@@ -58,6 +58,19 @@ let filteredWindows = $derived.by(() => {
   return windows.value.filter((w) => w.monitor === monitor.id);
 });
 
+// Closing/killing a task must leave keyboard navigation on an existing window.
+$effect.root(() => {
+  $effect(() => {
+    if (!showing) return;
+    if (filteredWindows.length === 0) {
+      selectedWindow = null;
+      showing = false;
+    } else if (selectedWindow !== null && !filteredWindows.some((win) => win.hwnd === selectedWindow)) {
+      selectedWindow = filteredWindows[0]!.hwnd;
+    }
+  });
+});
+
 $effect.root(() => {
   widget.attachPosition();
   $effect(() => {

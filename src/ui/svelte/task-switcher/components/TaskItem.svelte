@@ -15,6 +15,7 @@
   let boxRef: HTMLDivElement | undefined = $state();
   const isSelected = $derived(task.hwnd === globalState.selectedWindow);
   const preview = $derived(globalState.previews[task.hwnd]);
+  let terminating = $state(false);
 
   // Focus button when selected
   $effect(() => {
@@ -56,6 +57,26 @@
     globalState.selectedWindow = task.hwnd;
   }
 
+  async function handleAuxClick(e: MouseEvent) {
+    if (e.button !== 1) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (terminating) return;
+    terminating = true;
+    try {
+      await invoke(SeelenCommand.WegKillApp, { hwnd: task.hwnd });
+      // Alt release must not try to activate a window from the terminating process.
+      const selected = globalState.windows.find((win) => win.hwnd === globalState.selectedWindow);
+      if (selected?.process.id === task.process.id) {
+        globalState.selectedWindow = globalState.windows.find((win) => win.process.id !== task.process.id)?.hwnd ?? null;
+      }
+    } catch (error) {
+      console.error("Failed to terminate selected application:", error);
+    } finally {
+      terminating = false;
+    }
+  }
+
   // Navigation helper functions
   function getNextIndex(currentIndex: number, totalItems: number): number {
     return (currentIndex + 1) % totalItems;
@@ -87,6 +108,8 @@
   tabindex="0"
   onkeydown={handleKeyDown}
   onclick={handleClick}
+  onauxclick={handleAuxClick}
+  onpointerdown={(e) => { if (e.button === 1) e.preventDefault(); }}
   onfocus={handleFocus}
 >
   <div class="task-header">
