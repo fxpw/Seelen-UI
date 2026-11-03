@@ -107,8 +107,30 @@
   --weg-item-attention-color: var(--slu-std-ui-hover-overlay);
 }
 
-.weg-item-overlay {
+.weg-item-overlay,
+.weg-item-drag-container[data-item-kind="Media"] > .media-session-container {
   position: relative;
+
+  .taskbar[data-magnification="true"] & {
+    scale: var(--dock-zoom, 1);
+    translate: var(--dock-shift-x, 0px) var(--dock-shift-y, 0px);
+    // Frame-based smoothing owns these transforms; CSS transitions would lag behind each new target.
+    transition: none;
+    will-change: scale, translate;
+  }
+
+  .taskbar.bottom & {
+    transform-origin: center bottom;
+  }
+  .taskbar.top & {
+    transform-origin: center top;
+  }
+  .taskbar.left & {
+    transform-origin: left center;
+  }
+  .taskbar.right & {
+    transform-origin: right center;
+  }
 
   .weg-item-badge {
     @include fade;

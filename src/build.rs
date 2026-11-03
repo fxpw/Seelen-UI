@@ -3,6 +3,11 @@ use std::{fs::create_dir, path::PathBuf};
 use slu_utils::{checksums::CheckSums, signature::sign_minisign};
 
 fn main() {
+    // Standalone debug builds embed the UI too; invalidate cached assets after a frontend rebuild.
+    println!("cargo:rerun-if-changed=../dist");
+    println!("cargo:rerun-if-env-changed=FXPW_SIGNING_PUBLIC_KEY");
+    println!("cargo:rerun-if-env-changed=TAURI_SIGNING_PRIVATE_KEY");
+    println!("cargo:rerun-if-env-changed=TAURI_SIGNING_PRIVATE_KEY_PASSWORD");
     let _ = create_dir("gen");
 
     let mut checksums = CheckSums::new();

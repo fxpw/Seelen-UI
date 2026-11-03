@@ -13,6 +13,7 @@ export function createRemoteDataResolver(
       if (!mounted) return;
       try {
         const response = await fetch(rd.url, rd.requestInit as RequestInit);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = response.headers.get("Content-Type")?.includes("application/json")
           ? await response.json()
           : await response.text();
@@ -20,6 +21,7 @@ export function createRemoteDataResolver(
           fetchedData[key] = data;
         }
       } catch (err) {
+        if (mounted) delete fetchedData[key];
         console.error(`Error fetching ${key}:`, err);
       }
     }

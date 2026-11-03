@@ -66,6 +66,14 @@ body {
 }
 
 /** Taskbar Styles */
+.taskbar[data-magnification="true"] .weg-items-container {
+  overflow: visible;
+}
+
+.weg-item-drag-container {
+  position: relative;
+}
+
 .taskbar {
   position: relative;
   width: min-content;

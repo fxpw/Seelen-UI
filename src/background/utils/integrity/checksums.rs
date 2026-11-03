@@ -9,9 +9,6 @@ use crate::error::Result;
 use tauri::Manager;
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
-/// Public key for minisign verification (same as updater)
-const MINISIGN_PUBLIC_KEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ4QjU1RUI0NEM0NzBERUIKUldUckRVZE10RjYxU0lpaERvdklYL05DVlg0Sk9EVngvaEgzZjMvU1NNemJTZXZ1K0dNVXU3ZkQK";
-
 pub async fn ensure_bundle_files_integrity(app: &tauri::AppHandle) -> Result<()> {
     log::trace!("Validating bundle files integrity");
 
@@ -30,8 +27,12 @@ pub async fn ensure_bundle_files_integrity(app: &tauri::AppHandle) -> Result<()>
     }
 
     // Skip signature validation in development mode
-    if !tauri::is_dev() {
-        verify_external_signature(&checksums_path, &signature_path, MINISIGN_PUBLIC_KEY)?;
+    if !cfg!(debug_assertions) {
+        verify_external_signature(
+            &checksums_path,
+            &signature_path,
+            crate::utils::updater::SIGN_PUB_KEY,
+        )?;
     }
     validate_directory_checksums(&static_path, &checksums_path).await?;
 

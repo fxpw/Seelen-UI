@@ -219,7 +219,7 @@ impl Default for SeelenWegSettings {
             position: SeelenWegSide::Bottom,
             show_instance_counter: true,
             show_window_title: false,
-            temporal_items_visibility: WegTemporalItemsVisibility::All,
+            temporal_items_visibility: WegTemporalItemsVisibility::OnMonitor,
             pinned_items_visibility: WegPinnedItemsVisibility::Always,
             size: 40,
             margin: 8,

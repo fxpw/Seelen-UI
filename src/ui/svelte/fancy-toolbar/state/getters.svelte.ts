@@ -1,6 +1,8 @@
 import { invoke, PluginList, SeelenCommand, SeelenEvent, Settings, subscribe, Widget } from "@seelen-ui/lib";
 import type { UserAppWindowColors } from "@seelen-ui/lib/types";
 import { lazyRune } from "libs/ui/svelte/utils";
+import { MonitorLayout } from "libs/ui/monitor-layout.ts";
+import type { ToolbarState } from "@seelen-ui/lib/types";
 
 export const currentMonitorId = Widget.getCurrent().decoded.monitorId!;
 
@@ -38,7 +40,11 @@ subscribe(SeelenEvent.GlobalFocusChanged, focused.setByPayload);
 export const widgetStatuses = lazyRune(() => invoke(SeelenCommand.DebugGetWidgetsStatuses));
 subscribe(SeelenEvent.WidgetDebugInfoChanged, widgetStatuses.setByPayload);
 
-export const toolbarItems = lazyRune(() => invoke(SeelenCommand.StateGetToolbarItems));
+export const toolbarLayout = new MonitorLayout<ToolbarState>(currentMonitorId, {
+  read: (filename) => invoke(SeelenCommand.ReadFile, { filename }),
+  write: (filename, content) => invoke(SeelenCommand.WriteFile, { filename, content }),
+}, () => invoke(SeelenCommand.StateGetToolbarItems));
+export const toolbarItems = lazyRune(() => toolbarLayout.load());
 
 export const plugins = lazyRune(async () => (await PluginList.getAsync()).forCurrentWidget());
 PluginList.onChange((list) => {

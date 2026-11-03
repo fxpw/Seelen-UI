@@ -1,0 +1,13 @@
+id: "@fxpw/wsl-launcher"
+metadata:
+  displayName:
+    en: "WSL launcher"
+  description:
+    en: "Open the default WSL distribution in a terminal."
+icon: FaLinux
+target: "@seelen/fancy-toolbar"
+plugin:
+  scopes: []
+  template: 'return "WSL";'
+  tooltip: 'return "Open WSL";'
+  onClick: 'open("wsl.exe");'

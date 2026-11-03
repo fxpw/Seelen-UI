@@ -1,0 +1,12 @@
+id: "@fxpw/temperatures"
+metadata:
+  displayName:
+    en: "CPU and GPU temperatures"
+  description:
+    en: "Hardware temperatures. Start the local sensor bridge to enable readings."
+icon: FaThermometerHalf
+target: "@seelen/fancy-toolbar"
+plugin:
+  scopes: []
+  template: 'return typeof metrics === "string" ? metrics : "CPU — · GPU —";'
+  tooltip: 'return t("fxpw_temperatures.tooltip");'

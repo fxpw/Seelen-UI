@@ -1,4 +1,6 @@
 node_modules
+.tools/
+/src/static/tools/wsl/WslControl.exe
 
 .vscode
 .env

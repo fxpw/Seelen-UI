@@ -4,7 +4,7 @@ use std::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use parking_lot::RwLock;
@@ -26,7 +26,7 @@ use crate::{
     event_manager,
     state::application::FULL_STATE,
     utils::spawn_named_thread,
-    widgets::weg::SeelenWeg,
+    widgets::{webview::WidgetWebviewLabel, weg::SeelenWeg},
     windows_api::{
         WindowEnumerator,
         event_window::IS_INTERACTIVE_SESSION,
@@ -171,21 +171,49 @@ pub fn register_win_hook() -> Result<()> {
     // todo move this to input/mouse/keyboard module
     spawn_named_thread("MouseEventHook", || {
         let mut last_pos = seelen_core::Point::default();
-        let sleep_time = Duration::from_millis(100); // 10fps
+        let mut last_global_pos = last_pos.clone();
+        let mut last_global_update = Instant::now();
+        let frame_time = Duration::from_nanos(1_000_000_000 / 144);
+        let mut deadline = Instant::now();
         loop {
             // Pause when session is not interactive to reduce CPU usage
             if !IS_INTERACTIVE_SESSION.load(Ordering::Acquire) {
                 std::thread::sleep(Duration::from_secs(1));
+                deadline = Instant::now();
                 continue;
             }
 
-            if let Ok(pos) = Mouse::get_cursor_pos()
-                && last_pos != pos
-            {
-                emit_to_webviews(SeelenEvent::GlobalMouseMove, [pos.x, pos.y]);
+            if let Ok(pos) = Mouse::get_cursor_pos() {
+                // Keep the legacy broadcast at 10 Hz. Only docks need frame-rate input;
+                // their websocket snapshots coalesce instead of building an input backlog.
+                let broadcast_due = last_global_update.elapsed() >= Duration::from_millis(100);
+                if broadcast_due {
+                    last_global_update = Instant::now();
+                }
+                if broadcast_due && last_global_pos != pos {
+                    emit_to_webviews(SeelenEvent::GlobalMouseMove, [pos.x, pos.y]);
+                    last_global_pos = pos.clone();
+                } else if last_pos != pos {
+                    let payload = format!("[{},{}]", pos.x, pos.y);
+                    crate::server::events::EVENTS_HUB.publish_where(
+                        SeelenEvent::GlobalMouseMove,
+                        &payload,
+                        |label| {
+                            WidgetWebviewLabel::try_from_raw(label).is_ok_and(|label| {
+                                label.widget_id == seelen_core::resource::WidgetId::known_weg()
+                            })
+                        },
+                    );
+                }
                 last_pos = pos;
             }
-            std::thread::sleep(sleep_time);
+            deadline += frame_time;
+            let now = Instant::now();
+            // Skip missed ticks instead of spinning to catch up after a stall.
+            if deadline <= now {
+                deadline = now + frame_time;
+            }
+            std::thread::sleep(deadline.saturating_duration_since(now));
         }
     });
 

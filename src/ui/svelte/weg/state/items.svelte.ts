@@ -1,10 +1,11 @@
-import { invoke, SeelenCommand, SeelenEvent, subscribe } from "@seelen-ui/lib";
+import { SeelenEvent, subscribe } from "@seelen-ui/lib";
 import type { PluginId, WegItem, WegItems } from "@seelen-ui/lib/types";
 import { debounce } from "lodash";
 import { emit, listen } from "@tauri-apps/api/event";
 import type { AppOrFileWegItem, SeparatorWegItem } from "../types.ts";
-import { getWindowsForItem, interactables } from "./windows.svelte.ts";
-import { plugins, wegItems } from "./getters.svelte.ts";
+import { getWindowsForItem, windowsState } from "./windows.svelte.ts";
+import { currentMonitorId, dockLayout, plugins, wegItems } from "./getters.svelte.ts";
+import { isSameMonitor } from "libs/ui/monitor-layout.ts";
 import { isHorizontalDock } from "./settings.svelte.ts";
 import { stableUUID } from "libs/ui/utils.ts";
 
@@ -15,6 +16,7 @@ interface OptimisticDockState {
 
 interface SyncPayload {
   source: string;
+  monitorId: string;
   state: OptimisticDockState;
 }
 
@@ -97,17 +99,11 @@ subscribe(SeelenEvent.WegAddItem, (e) => {
   _dockState = { ..._dockState, items };
 });
 
-subscribe(SeelenEvent.PluginEnabled, (e) => {
-  dockStateActions.addPlugin(e.payload);
-});
-
-subscribe(SeelenEvent.WegItemsChanged, (e) => {
-  // Reload the entire dock state from the backend
-  _dockState = getStateFromStored(e.payload);
-});
+// Global resource events must not replace independent monitor layouts.
 
 let isRemoteUpdate = false;
 listen<SyncPayload>("hidden::sync-dock-items", ({ payload }) => {
+  if (!isSameMonitor(currentMonitorId, payload.monitorId)) return;
   if (payload.source === CLIENT_ID) return;
   if (JSON.stringify(payload.state) !== JSON.stringify(_dockState)) {
     isRemoteUpdate = true;
@@ -116,7 +112,7 @@ listen<SyncPayload>("hidden::sync-dock-items", ({ payload }) => {
 });
 
 const emitSyncEvent = debounce((state: OptimisticDockState) => {
-  emit<SyncPayload>("hidden::sync-dock-items", { source: CLIENT_ID, state });
+  emit<SyncPayload>("hidden::sync-dock-items", { source: CLIENT_ID, monitorId: currentMonitorId, state });
 }, 300);
 
 /** Same umid, or same path when neither has one (paths are case insensitive on Windows). */
@@ -143,11 +139,9 @@ export function listToGroups(items: WegItem[], includeSeparator = false) {
 
 const saveDockState = debounce(async (state: OptimisticDockState) => {
   console.trace("Saving dock state");
-  await invoke(SeelenCommand.StateWriteWegItems, {
-    items: {
-      isReorderDisabled: state.isReorderDisabled,
-      ...listToGroups(state.items),
-    },
+  await dockLayout.save({
+    isReorderDisabled: state.isReorderDisabled,
+    ...listToGroups(state.items),
   });
 }, 1000);
 
@@ -277,7 +271,7 @@ $effect.root(() => {
 
 $effect.root(() => {
   $effect(() => {
-    const windows = interactables.value;
+    const windows = windowsState.dockWindows;
     const state = _dockState;
 
     const appOrFileItems = state.items.filter(

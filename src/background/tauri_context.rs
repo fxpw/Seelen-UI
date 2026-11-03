@@ -1,5 +1,5 @@
-/// this macro slowness the build/check on dev so we split this
-/// to this separated file to avoid slowness when editting main.rs
+/// Keep asset embedding isolated from frequent edits to main.rs.
+/// build.rs tracks dist so standalone builds include the current frontend.
 pub fn get_context() -> tauri::Context {
     tauri::generate_context!()
 }

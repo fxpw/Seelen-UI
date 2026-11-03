@@ -41,6 +41,16 @@ impl EventsHub {
 
     /// Hands the already serialized payload to every subscribed connection.
     pub fn publish(&self, event: &str, payload_json: &str) {
+        self.publish_where(event, payload_json, |_| true);
+    }
+
+    /// Sends a snapshot only to matching webviews, preserving subscription/coalescing rules.
+    pub fn publish_where(
+        &self,
+        event: &str,
+        payload_json: &str,
+        accepts_label: impl Fn(&str) -> bool,
+    ) {
         if !self.has_listeners(event) {
             return;
         }
@@ -54,8 +64,10 @@ impl EventsHub {
         };
 
         let coalesce = !SeelenEvent::is_queued(event);
-        for connection in self.connections.read().values() {
-            connection.push(event, &frame, coalesce);
+        for (label, connection) in self.connections.read().iter() {
+            if accepts_label(label) {
+                connection.push(event, &frame, coalesce);
+            }
         }
     }
 
@@ -204,6 +216,26 @@ mod tests {
         hub.publish(SeelenEvent::PowerMode, "1");
         assert!(frames(&connection).is_empty());
         assert!(!hub.has_listeners(SeelenEvent::PowerMode));
+    }
+
+    #[test]
+    fn targeted_pointer_snapshots_skip_other_widgets_and_keep_only_latest() {
+        let hub = EventsHub::default();
+        let dock = hub.connect("dock");
+        let toolbar = hub.connect("toolbar");
+        hub.subscribe(&dock, SeelenEvent::GlobalMouseMove);
+        hub.subscribe(&toolbar, SeelenEvent::GlobalMouseMove);
+        for payload in ["[1,2]", "[3,4]"] {
+            hub.publish_where(SeelenEvent::GlobalMouseMove, payload, |label| {
+                label == "dock"
+            });
+        }
+        assert!(frames(&toolbar).is_empty());
+        let delivered = frames(&dock);
+        assert_eq!(delivered.len(), 1);
+        assert!(delivered[0].contains("[3,4]"));
+        hub.publish(SeelenEvent::GlobalMouseMove, "[5,6]");
+        assert_eq!(frames(&toolbar).len(), 1);
     }
 
     #[test]

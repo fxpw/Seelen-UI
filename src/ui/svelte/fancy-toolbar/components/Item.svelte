@@ -5,6 +5,7 @@
   import { t } from "../i18n/index.ts";
   import { evalActionSanboxed } from "./Evaluated/actionEvaluator.ts";
   import { getMenuForItem } from "../itemMenu.ts";
+  import { showWslMenu } from "../wslMenu.ts";
   import { settingsState } from "../state/settings.svelte.ts";
   import { styleToString } from "../utils.ts";
   import { createRemoteDataResolver } from "../remoteData.svelte.ts";
@@ -86,6 +87,10 @@
   // ── Event handlers ───────────────────────────────────────────────────────
 
   function handleClick() {
+    if (pluginId === "@fxpw/wsl-launcher") {
+      showWslMenu($t).catch(console.error);
+      return;
+    }
     evalActionSanboxed(self.id, onClickExec, scope);
   }
 
@@ -139,7 +144,8 @@
       data-tooltip-origin-y={settingsState.tooltipY}
       style={itemStyle}
       class="ft-bar-item"
-      class:ft-bar-item-clickable={!!self.onClick}
+      class:ft-bar-item-clickable={!!self.onClick || pluginId === "@fxpw/wsl-launcher"}
+      aria-haspopup={pluginId === "@fxpw/wsl-launcher" ? "menu" : undefined}
       onclick={handleClick}
       onwheel={self.onWheelUp || self.onWheelDown ? handleWheel : undefined}
       oncontextmenu={handleContextMenu}

@@ -22,6 +22,10 @@ subscribe(SeelenEvent.NotificationsModeChanged, notificationsMode.setByPayload);
 await notificationsMode.init();
 
 class State {
+  get language(): string {
+    return settings.value.language;
+  }
+
   get notifications(): AppNotification[] {
     return notifications.value;
   }

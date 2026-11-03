@@ -36,6 +36,7 @@
   style={sortable.isDragging ? "opacity: 0.3" : null}
   data-dragging={sortable.isDragging}
   data-item-id={item.id}
+  data-item-kind={item.type}
   class="weg-item-drag-container"
   class:dragging={sortable.isDragging}
   transition:CssHandled|global={{

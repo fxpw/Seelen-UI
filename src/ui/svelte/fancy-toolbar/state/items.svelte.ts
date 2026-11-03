@@ -1,9 +1,9 @@
-import { invoke, SeelenCommand, SeelenEvent, subscribe } from "@seelen-ui/lib";
 import type { PluginId, ToolbarItem, ToolbarItem2, ToolbarState } from "@seelen-ui/lib/types";
 import { matchIds } from "../utils.ts";
 import { debounce } from "lodash";
 import { emit, listen } from "@tauri-apps/api/event";
-import { plugins, toolbarItems as SaveFile } from "./getters.svelte.ts";
+import { currentMonitorId, plugins, toolbarItems as SaveFile, toolbarLayout } from "./getters.svelte.ts";
+import { isSameMonitor } from "libs/ui/monitor-layout.ts";
 
 export { plugins };
 
@@ -29,6 +29,7 @@ export interface OptimisticToolbarState {
 
 interface SyncPayload {
   source: string;
+  monitorId: string;
   state: OptimisticToolbarState;
 }
 
@@ -139,6 +140,7 @@ export function restoreStateToDefault() {
 
 let isRemoteUpdate = false;
 listen<SyncPayload>("hidden::sync-toolbar-items", ({ payload }) => {
+  if (!isSameMonitor(currentMonitorId, payload.monitorId)) return;
   if (payload.source === CLIENT_ID) return;
   if (JSON.stringify(payload.state) !== JSON.stringify(_toolbarState)) {
     isRemoteUpdate = true;
@@ -147,15 +149,13 @@ listen<SyncPayload>("hidden::sync-toolbar-items", ({ payload }) => {
 });
 
 const emitSyncEvent = debounce((state: OptimisticToolbarState) => {
-  emit<SyncPayload>("hidden::sync-toolbar-items", { source: CLIENT_ID, state });
+  emit<SyncPayload>("hidden::sync-toolbar-items", { source: CLIENT_ID, monitorId: currentMonitorId, state });
 }, 300);
 
 const saveTbState = debounce(async (state: OptimisticToolbarState) => {
   console.trace("Saving toolbar state");
   const { left, center, right } = listToGroups(state.items);
-  await invoke(SeelenCommand.StateWriteToolbarItems, {
-    items: { isReorderDisabled: state.isReorderDisabled, left, center, right },
-  });
+  await toolbarLayout.save({ isReorderDisabled: state.isReorderDisabled, left, center, right });
 }, 1000);
 
 let mounted = false;
@@ -173,20 +173,12 @@ $effect.root(() => {
       return;
     }
 
-    const { left, center, right } = listToGroups(state.items);
-    if (left.length === 0 && center.length === 0 && right.length === 0) {
-      restoreStateToDefault();
-      return;
-    }
-
     emitSyncEvent(state);
     saveTbState(state);
   });
 });
 
-subscribe(SeelenEvent.PluginEnabled, (e) => {
-  toolbarActions.addItem(e.payload);
-});
+// Installations make plugins available; add them explicitly on the desired monitor.
 
 $effect.root(() => {
   $effect(() => {

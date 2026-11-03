@@ -16,10 +16,24 @@
   import type { SwItem } from "../types.ts";
   import DockItemsGroup from "./DockItemsGroup.svelte";
   import WegItemSwitch from "./WegItemSwitch.svelte";
+  import { createDockMagnifier, type DockMagnifier } from "../magnification.ts";
+  import { mousePos } from "../state/getters.svelte.ts";
 
   // Workaround for https://github.com/clauderic/dnd-kit/issues/2112
   const manager = createDragDropManager();
   onDestroy(() => manager.destroy());
+
+  let magnifier = $state.raw<DockMagnifier | null>(null);
+  function attachMagnifier(node: HTMLElement) {
+    const instance = createDockMagnifier(node);
+    magnifier = instance;
+    return () => { instance.destroy(); if (magnifier === instance) magnifier = null; };
+  }
+  $effect(() => {
+    const { x, y } = mousePos.value;
+    const rect = settingsState.widgetRect.webviewRect;
+    magnifier?.approach((x - rect.left) / devicePixelRatio, (y - rect.top) / devicePixelRatio);
+  });
 
   const settings = $derived(settingsState.value as any);
   const isHorizontal = $derived(settings?.position === "Top" || settings?.position === "Bottom");
@@ -30,7 +44,7 @@
     const showPinned = pinnedVisibility === WegPinnedItemsVisibility.Always || monitor.isPrimary;
 
     if (item.type !== "AppOrFile") {
-      return showPinned;
+      return true;
     }
     if (item.pinned && showPinned) {
       return true;
@@ -87,6 +101,7 @@
 </script>
 
 <div
+  {@attach attachMagnifier}
   role="toolbar"
   tabindex="0"
   data-has-margin={!!settings?.margin}

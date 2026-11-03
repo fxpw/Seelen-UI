@@ -28,7 +28,7 @@ subscribe(SeelenEvent.GlobalFocusChanged, (e) => {
   }
 });
 
-/** windows that belong to this dock, honoring the "On Monitor" temporal items visibility */
+/** Running applications, previews and indicators belong to this physical monitor. */
 const _dockWindows = $derived.by(() => {
   if (settingsState.value.temporalItemsVisibility !== WegTemporalItemsVisibility.OnMonitor) {
     return interactables.value;

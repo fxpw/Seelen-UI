@@ -4,7 +4,7 @@ export * from "./bluetoothIcons";
 export * from "./signals.svelte";
 
 /** Get relative time string from a date (e.g., "2 hours ago", "3 days ago") */
-export function relativeTimeFromNow(date: Date): string {
+export function relativeTimeFromNow(date: Date, language = navigator.language): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffSeconds = Math.floor(diffMs / 1000);
@@ -15,7 +15,7 @@ export function relativeTimeFromNow(date: Date): string {
   const diffMonths = Math.floor(diffDays / 30);
   const diffYears = Math.floor(diffDays / 365);
 
-  const rtf = new Intl.RelativeTimeFormat(navigator.language, { numeric: "auto" });
+  const rtf = new Intl.RelativeTimeFormat(language, { numeric: "auto" });
 
   if (diffYears > 0) {
     return rtf.format(-diffYears, "year");

@@ -1,0 +1,14 @@
+id: "@fxpw/wsl-launcher"
+metadata:
+  displayName:
+    en: "WSL launcher"
+    ru: "Меню WSL"
+  description:
+    en: "Start, restart or shut down WSL from a dropdown menu."
+    ru: "Запуск, перезапуск и выключение WSL из выпадающего меню."
+icon: FaLinux
+target: "@seelen/fancy-toolbar"
+plugin:
+  scopes: []
+  template: 'return "WSL ▾";'
+  tooltip: 'return t("wsl.tooltip");'

@@ -78,6 +78,10 @@ impl TaskSchedulerHelper {
             settings.SetAllowDemandStart(VARIANT_TRUE)?;
             settings.SetDisallowStartIfOnBatteries(VARIANT_FALSE)?;
             settings.SetStopIfGoingOnBatteries(VARIANT_FALSE)?;
+            settings.SetExecutionTimeLimit(&"PT0S".into())?;
+            settings.SetStartWhenAvailable(VARIANT_TRUE)?;
+            settings.SetRestartCount(3)?;
+            settings.SetRestartInterval(&"PT1M".into())?;
 
             let triggers = task.Triggers()?;
             if let Some(old) = old_task {

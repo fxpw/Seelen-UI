@@ -9,7 +9,8 @@
   } from "@seelen-ui/lib/types";
   import Icon from "libs/ui/svelte/components/Icon/Icon.svelte";
   import FileIcon from "libs/ui/svelte/components/Icon/FileIcon.svelte";
-  import moment from "moment";
+  import { relativeTimeFromNow } from "libs/ui/svelte/utils";
+  import { globalState } from "../state.svelte.ts";
 
   interface Props {
     notification: AppNotification;
@@ -106,7 +107,7 @@
       <div>{notification.appName}</div>
       <span>-</span>
       <div>
-        {moment(notification.date).fromNow()}
+        {relativeTimeFromNow(new Date(notification.date), globalState.language)}
       </div>
     </div>
     <button data-skin="transparent" onclick={handleClose}>

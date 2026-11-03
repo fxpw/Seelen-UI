@@ -57,3 +57,10 @@ settings:
   restart: Restart
   title: Settings
 show_desktop: Show Desktop
+wsl:
+  start: Start WSL
+  restart: Restart WSL
+  stop: Shut down WSL
+  tooltip: Start, restart or shut down WSL
+fxpw_temperatures:
+  tooltip: CPU and GPU temperature. A dash means the sensor is unavailable or readings are stale.
