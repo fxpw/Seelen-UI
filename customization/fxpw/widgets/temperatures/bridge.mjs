@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,6 +42,13 @@ async function sample() {
       data.gpu = { name, temperature: numberOrNull(temperature), usage: numberOrNull(usage) };
     } catch {
       data.gpu = null;
+    }
+    data.cpuEnabled = !existsSync(join(root, "cpu-disabled"));
+    if (!data.cpuEnabled) {
+      data.cpu = null;
+      fallbackCpu = null;
+      data.sampledAt = Date.now();
+      return;
     }
     let cpu = null;
     try {

@@ -54,3 +54,8 @@ Unregister-ScheduledTask -TaskName fxpw-SeelenCpuSensors -Confirm:$false
 ```
 
 This leaves PawnIO installed for other monitoring applications. Removing the shared driver is a separate action.
+
+The local marker `%LOCALAPPDATA%\fxpw-seelen\sensors\cpu-disabled` disables CPU reads (including the WMI fallback) and
+hides the CPU label while keeping GPU readings active. Disable and stop `fxpw-SeelenCpuSensors` as well to remove its
+logon startup. Release installation respects the marker and does not re-enable that task. To restore CPU readings,
+remove the marker, then enable and start the task again.

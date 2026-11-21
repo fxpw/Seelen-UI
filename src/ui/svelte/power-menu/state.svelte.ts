@@ -27,11 +27,18 @@ await Promise.all([user.init(), monitors.init(), refreshPendingOsUpdates()]);
 const posSet = rootEffectAsync(() => Widget.self.setPosition(monitors.desktopRect));
 
 Widget.self.onTrigger(async () => {
+  if (Widget.self.isShown) {
+    await Widget.self.hide();
+    return;
+  }
   invoke(SeelenCommand.GetUser); // refresh user information
   refreshPendingOsUpdates();
-  await posSet; // wait for the initial position to be set
-  await Widget.self.show();
-  await Widget.self.focus();
+  await Widget.self.show(async () => {
+    await posSet;
+  });
+  if (Widget.self.isShown) {
+    await Widget.self.focus();
+  }
 });
 
 export type State = typeof state;

@@ -99,6 +99,7 @@
     invoke(SeelenCommand.TriggerContextMenu, {
       menu: { ...getMenuForItem($t, self.id), alignX: Alignment.Center, alignY: settingsState.popupAlignY },
       forwardTo: null,
+      toggleSource: null,
     });
   }
 

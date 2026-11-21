@@ -95,7 +95,11 @@ export function createDockMagnifier(node: HTMLElement): DockMagnifier {
       return;
     }
     const horizontal = node.classList.contains("horizontal");
-    const elements = Array.from(node.querySelectorAll<HTMLElement>(".weg-item-drag-container"));
+    const elements = Array.from(node.querySelectorAll<HTMLElement>(".weg-item-drag-container")).flatMap((element) =>
+      element.dataset.itemKind === "Media"
+        ? Array.from(element.querySelectorAll<HTMLElement>("[data-dock-media-slot]"))
+        : [element]
+    );
     const appSize = Number.parseFloat(getComputedStyle(node).getPropertyValue("--config-item-size")) || 40;
     const cells = elements.map((element) => {
       const rect = element.getBoundingClientRect();
@@ -104,10 +108,6 @@ export function createDockMagnifier(node: HTMLElement): DockMagnifier {
         size: horizontal ? rect.width : rect.height,
         magnifiable: ["AppOrFile", "Media"].includes(element.dataset.itemKind ?? "") &&
           !element.querySelector(".weg-split-items"),
-        maxScale: element.dataset.itemKind === "Media" ? 1.2 : 1.5,
-        inset: element.dataset.itemKind === "Media"
-          ? Math.max(0, (horizontal ? rect.width : rect.height) - appSize) / 2
-          : 0,
       };
     });
     const position = horizontal ? pointer.clientX : pointer.clientY;

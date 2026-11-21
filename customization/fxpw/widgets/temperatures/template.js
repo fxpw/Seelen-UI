@@ -1,1 +1,1 @@
-return typeof metrics === "string" ? metrics : "CPU — · GPU —";
+return typeof metrics === "string" ? metrics : "GPU —";

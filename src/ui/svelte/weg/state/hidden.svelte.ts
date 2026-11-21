@@ -1,9 +1,10 @@
 import { HideMode, WegAttentionReveal, WindowAttention } from "@seelen-ui/lib/types";
-import { virtualDesktops } from "./getters.svelte.ts";
+import { mousePos, virtualDesktops } from "./getters.svelte.ts";
 import { settingsState } from "./settings.svelte.ts";
 import { systemState } from "./system.svelte.ts";
 import { windowsState } from "./windows.svelte.ts";
 import { isThisWebviewFocused, isTouchPrimary } from "libs/ui/svelte/utils";
+import { type DockBounds, isDockRevealPoint } from "../reveal.ts";
 
 const isSwitchingWorkspace = $derived(virtualDesktops.value.switching);
 
@@ -21,6 +22,34 @@ const isRevealedByAttention = $derived.by(() => {
 
 let _hiddenByAutohide = $state(false);
 let _isDraggingItem = $state(false);
+let _isPointerOverDock = $state(false);
+let _dockBounds = $state.raw<DockBounds | null>(null);
+const isAtRevealEdge = $derived(isDockRevealPoint(
+  mousePos.value,
+  systemState.currentMonitor.rect,
+  settingsState.widgetRect.hitboxRect,
+  settingsState.position,
+  _dockBounds,
+));
+// Cursor pass-through can delay DOM pointerenter until another movement arrives.
+// Keep an already revealed dock open using its physical bounds as well.
+const isOverVisibleDock = $derived(
+  !_hiddenByAutohide && _dockBounds !== null &&
+    mousePos.value.x >= _dockBounds.left && mousePos.value.x < _dockBounds.right &&
+    mousePos.value.y >= _dockBounds.top && mousePos.value.y < _dockBounds.bottom,
+);
+const wantsReveal = $derived(
+  !windowsState.topInteractableWindow?.isFullscreen &&
+    (isAtRevealEdge || isOverVisibleDock || _isPointerOverDock || _isDraggingItem || isThisWebviewFocused.value),
+);
+
+export function setPointerOverDock(value: boolean): void {
+  _isPointerOverDock = value;
+}
+
+export function setDockBounds(bounds: DockBounds | null): void {
+  _dockBounds = bounds;
+}
 
 export const dockShouldBeHidden = {
   get value() {
@@ -50,8 +79,7 @@ $effect.root(() => {
       return;
     }
 
-    const { delayToHide, delayToShow, hideMode, position } = settingsState;
-    const isMouseOverEdge = systemState.mouseAtEdge === position;
+    const { delayToHide, delayToShow, hideMode } = settingsState;
 
     let hidden = false;
     let flush = false;
@@ -62,14 +90,13 @@ $effect.root(() => {
         flush = true;
         break;
       case HideMode.Always:
-        hidden = !isTouchPrimary.value && !isThisWebviewFocused.value && !isMouseOverEdge;
+        hidden = !isTouchPrimary.value && !wantsReveal;
         flush = isTouchPrimary.value;
         break;
       case HideMode.OnOverlap:
         hidden = !isTouchPrimary.value &&
           windowsState.isDockOverlapped &&
-          !isThisWebviewFocused.value &&
-          !isMouseOverEdge;
+          !wantsReveal;
         flush = isTouchPrimary.value;
         break;
     }

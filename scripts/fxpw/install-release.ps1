@@ -34,6 +34,24 @@ try {
     }
     $worker = Get-ScheduledTask -TaskName $workerTask -ErrorAction SilentlyContinue
     if ($worker) { Stop-ScheduledTask -InputObject $worker; Start-Sleep -Seconds 1 }
+    # Stopping the GUI launcher can leave its PowerShell child alive with the
+    # sensors directory as its working directory, preventing a directory move.
+    $workerStateFile = Join-Path $homeDir 'sensors\session-state.json'
+    if (Test-Path -LiteralPath $workerStateFile) {
+        $workerState = Get-Content -LiteralPath $workerStateFile -Raw | ConvertFrom-Json
+        if ($workerState.pid -gt 0) {
+            $workerProcess = Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$workerState.pid)
+            $sessionScript = Join-Path $runtime 'sensors\session.ps1'
+            $sessionArgument = '(?i)(?:^|\s)-File\s+"?'+[regex]::Escape($sessionScript)+'"?(?:\s|$)'
+            if ($workerProcess -and $workerProcess.Name -eq 'powershell.exe' -and $workerProcess.CommandLine -match $sessionArgument) {
+                $workerHandle = Get-Process -Id $workerProcess.ProcessId -ErrorAction SilentlyContinue
+                if ($workerHandle) {
+                    Stop-Process -InputObject $workerHandle
+                    if (-not $workerHandle.WaitForExit(5000)) { throw 'The previous sensor worker did not stop.' }
+                }
+            }
+        }
+    }
     $allowedApps = @((Join-Path $repo 'target\debug\seelen-ui.exe'), (Join-Path $runtime 'seelen-ui.exe'))
     $apps = @(Get-Process -Name seelen-ui -ErrorAction SilentlyContinue)
     foreach ($app in $apps) { if ($app.Path -notin $allowedApps) { throw 'Another Seelen installation is active; it was not stopped.' } }
@@ -73,8 +91,11 @@ try {
         Copy-Item -LiteralPath (Join-Path $repo ('customization\fxpw\widgets\temperatures\'+$name)) -Destination $temperatureDir
     }
     $user = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-    $powershell = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
-    $action = New-ScheduledTaskAction -Execute $powershell -Argument ('-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "'+(Join-Path $sensorDir 'session.ps1')+'"') -WorkingDirectory $sensorDir
+    $launcher = Join-Path $sensorDir 'fxpw-hidden-powershell.exe'
+    $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+    & $compiler /nologo /target:winexe /platform:x64 ('/out:'+$launcher) (Join-Path $PSScriptRoot 'HiddenPowerShell.cs')
+    if ($LASTEXITCODE -ne 0) { throw 'Hidden sensor launcher compilation failed.' }
+    $action = New-ScheduledTaskAction -Execute $launcher -Argument ('"'+(Join-Path $sensorDir 'session.ps1')+'"') -WorkingDirectory $sensorDir
     $trigger = New-ScheduledTaskTrigger -AtLogOn -User $user
     $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
     $taskSettings = New-ScheduledTaskSettingsSet -Hidden -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew
@@ -90,7 +111,7 @@ try {
     Start-ScheduledTask -TaskPath '\Seelen\' -TaskName 'Seelen UI Service'
     Start-ScheduledTask -TaskName $workerTask
     $cpuTask = Get-ScheduledTask -TaskName fxpw-SeelenCpuSensors -ErrorAction SilentlyContinue
-    if ($cpuTask) {
+    if ($cpuTask -and -not (Test-Path -LiteralPath (Join-Path $homeDir 'sensors\cpu-disabled'))) {
         Enable-ScheduledTask -InputObject $cpuTask | Out-Null
         if ($cpuTask.State -ne 'Running') { Start-ScheduledTask -InputObject $cpuTask }
     }

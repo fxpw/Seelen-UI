@@ -4,218 +4,105 @@
   import { convertFileSrc, invoke as tauriInvoke } from "@tauri-apps/api/core";
   import { t } from "../../i18n/index.ts";
   import type { MediaWegItem } from "../../types.ts";
+  import type { WidgetId } from "@seelen-ui/lib/types";
   import { settingsState } from "../../state/settings.svelte.ts";
   import { getMenuForItem } from "../../generalMenu.ts";
   import { players } from "../../state/getters.svelte.ts";
-  import { calcLuminance } from "../../application.ts";
+  import { triggerWidget } from "../../pluginEval.svelte.ts";
 
   interface Props {
     item: MediaWegItem;
   }
-
   let { item }: Props = $props();
-
-  const MAX_LUMINANCE = 210;
-  const MIN_LUMINANCE = 40;
-  const BRIGHTNESS_MULTIPLIER = 1.5;
 
   const session = $derived(players.value.find((s) => s.default));
   const thumbnailSrc = $derived(session?.thumbnail ? convertFileSrc(session.thumbnail) : null);
-
-  let luminance = $state(150);
-  const filteredLuminance = $derived(
-    Math.max(Math.min(luminance * BRIGHTNESS_MULTIPLIER, MAX_LUMINANCE), MIN_LUMINANCE),
-  );
-  const textColor = $derived(filteredLuminance < 125 ? "var(--color-fixed-gray-50)" : "var(--color-fixed-gray-800)");
-
-  $effect(() => {
-    if (!thumbnailSrc) {
-      luminance = 150;
-      return;
-    }
-    calcLuminance(thumbnailSrc)
-      .then((l) => (luminance = l))
-      .catch(console.error);
-  });
+  const tooltip = $derived(session ? `${session.title} - ${session.author}` : $t("media.not_playing"));
+  const controls = $derived([
+    { command: "media_prev", icon: "IoPlaySkipBack", label: $t("media.previous_track") },
+    {
+      command: "media_toggle_play_pause",
+      icon: session?.playing ? "IoPause" : "IoPlay",
+      label: $t(session?.playing ? "media.pause" : "media.play"),
+    },
+    { command: "media_next", icon: "IoPlaySkipForward", label: $t("media.next_track") },
+  ] as const);
 
   function onContextMenu(e: MouseEvent) {
     e.stopPropagation();
-    const alignX = settingsState.popupAlignX;
-    const alignY = settingsState.popupAlignY;
     invoke(SeelenCommand.TriggerContextMenu, {
-      menu: { ...getMenuForItem($t, item), alignX, alignY },
+      menu: { ...getMenuForItem($t, item), alignX: settingsState.popupAlignX, alignY: settingsState.popupAlignY },
       forwardTo: null,
+      toggleSource: null,
     });
   }
 
   function onClickBtn(cmd: string) {
-    if (session) {
-      tauriInvoke(cmd, { id: session.umid }).catch(console.error);
-    }
+    if (session) tauriInvoke(cmd, { id: session.umid }).catch(console.error);
   }
-
-  const tooltip = $derived(session ? `${session.title} - ${session.author}` : $t("media.label"));
 </script>
 
-<div
-  role="group"
-  class="weg-item weg-item-large media-session-container"
-  data-tooltip={tooltip}
-  data-tooltip-origin-y={settingsState.tooltipOrigin.y}
-  data-tooltip-origin-x={settingsState.tooltipOrigin.x}
-  data-tooltip-align-x={settingsState.popupAlignX}
-  data-tooltip-align-y={settingsState.popupAlignY}
-  oncontextmenu={onContextMenu}
->
-  <div class="media-session">
-    {#if thumbnailSrc}
-      <div
-        class="media-session-blurred-thumbnail-container"
-        style:background-color={`rgb(${filteredLuminance}, ${filteredLuminance}, ${filteredLuminance})`}
+<div class="media-session-container" role="group" aria-label={$t("media.label")} oncontextmenu={onContextMenu}>
+  <div class="weg-media-slot" data-dock-media-slot data-item-kind="Media">
+    <div class="weg-item-overlay">
+      <button
+        id={`${item.id}-cover`}
+        class="weg-item weg-media-button weg-media-cover"
+        data-skin="transparent"
+        aria-label={$t("media.label")}
+        data-tooltip={tooltip}
+        data-tooltip-origin-y={settingsState.tooltipOrigin.y}
+        data-tooltip-origin-x={settingsState.tooltipOrigin.x}
+        data-tooltip-align-x={settingsState.popupAlignX}
+        data-tooltip-align-y={settingsState.popupAlignY}
+        onclick={() => triggerWidget("@seelen/media-popup" as WidgetId, `${item.id}-cover`)}
       >
-        <img class="media-session-blurred-thumbnail" src={thumbnailSrc} loading="lazy" alt="" />
-      </div>
-    {/if}
-
-    <div class="media-session-thumbnail-container">
-      {#if thumbnailSrc}
-        <img class="media-session-thumbnail" src={thumbnailSrc} loading="lazy" alt="" />
-      {:else}
-        <SpecificIcon class="media-session-thumbnail" name="defaultPlayerThumbnail" />
-      {/if}
-
-      {#if session}
-        <FileIcon class="media-session-app-icon" umid={session.umid} />
-      {/if}
-    </div>
-
-    <div class="media-session-info">
-      <span
-        class="media-session-title"
-        class:media-session-title-default={!session}
-        style:color={session ? textColor : undefined}
-      >
-        {session ? session.title : $t("media.not_playing")}
-      </span>
-
-      {#if session}
-        <div class="media-session-actions" style="color: {textColor}">
-          <button data-skin="transparent" onclick={() => onClickBtn("media_prev")}>
-            <Icon iconName="IoPlaySkipBack" />
-          </button>
-          <button data-skin="transparent" onclick={() => onClickBtn("media_toggle_play_pause")}>
-            <Icon iconName={session?.playing ? "IoPause" : "IoPlay"} />
-          </button>
-          <button data-skin="transparent" onclick={() => onClickBtn("media_next")}>
-            <Icon iconName="IoPlaySkipForward" />
-          </button>
-        </div>
-      {/if}
+        {#if thumbnailSrc}
+          <img class="media-session-thumbnail" src={thumbnailSrc} loading="lazy" alt="" draggable="false" />
+        {:else}
+          <SpecificIcon class="media-session-thumbnail" name="defaultPlayerThumbnail" />
+        {/if}
+        {#if session}
+          <FileIcon class="media-session-app-icon" umid={session.umid} />
+        {/if}
+      </button>
     </div>
   </div>
+  {#each controls as control (control.command)}
+    <div class="weg-media-slot" data-dock-media-slot data-item-kind="Media">
+      <div class="weg-item-overlay">
+        <button
+          class="weg-item weg-media-button"
+          data-skin="transparent"
+          aria-label={control.label}
+          data-tooltip={control.label}
+          data-tooltip-origin-y={settingsState.tooltipOrigin.y}
+          data-tooltip-origin-x={settingsState.tooltipOrigin.x}
+          data-tooltip-align-x={settingsState.popupAlignX}
+          data-tooltip-align-y={settingsState.popupAlignY}
+          disabled={!session}
+          onclick={() => onClickBtn(control.command)}
+        >
+          <Icon class="weg-item-icon" iconName={control.icon} />
+        </button>
+      </div>
+    </div>
+  {/each}
 </div>
 
 <style>
-  .media-session {
+  .media-session-container {
     display: flex;
-    position: relative;
-    width: 100%;
-    height: 100%;
-
+    align-items: center;
+    gap: var(--config-space-between-items);
     :global(.vertical) & {
       flex-direction: column;
     }
   }
-
-  .media-session-blurred-thumbnail-container {
-    position: absolute;
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-
-    .media-session-blurred-thumbnail {
-      width: 100%;
-      height: 100%;
-      object-fit: fill;
-      filter: blur(10px) brightness(125%) contrast(125%);
-    }
-  }
-
-  .media-session-thumbnail-container {
+  .weg-media-slot {
     position: relative;
+    flex-shrink: 0;
     width: var(--config-item-size);
     height: var(--config-item-size);
-    flex-shrink: 0;
-
-    .media-session-thumbnail {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      background: #0004;
-    }
-
-    :global(.media-session-app-icon) {
-      position: absolute;
-      width: 25%;
-      aspect-ratio: 1/1;
-      right: 5%;
-      bottom: 5%;
-      object-fit: contain;
-    }
-  }
-
-  .media-session-info {
-    flex: 1;
-
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-
-    position: relative;
-    overflow: hidden;
-    padding: 4px;
-
-    .media-session-title {
-      letter-spacing: 0.3px;
-      line-height: 1.3em;
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
-      max-width: 100%;
-      margin-bottom: 2px;
-      margin-right: -2px;
-
-      &.media-session-title-default {
-        text-align: center;
-        white-space: normal;
-      }
-
-      :global(.vertical) & {
-        display: none;
-      }
-    }
-
-    .media-session-actions {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-
-      :global(.vertical) & {
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      button {
-        font-size: 0.5rem;
-
-        :global(.svg-icon) {
-          height: 12px;
-        }
-      }
-    }
   }
 </style>

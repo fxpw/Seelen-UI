@@ -9,7 +9,7 @@ await widget.init({ normalizeDevicePixelRatio: true });
 
 widget.window.setResizable(false);
 widget.onTrigger(async () => {
-  if (await widget.window.isVisible()) {
+  if (widget.isShown) {
     widget.hide();
   } else {
     await widget.show();

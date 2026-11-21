@@ -172,6 +172,7 @@
     invoke(SeelenCommand.TriggerContextMenu, {
       menu: { ...buildContextMenu(), alignX: Alignment.Center, alignY },
       forwardTo: null,
+      toggleSource: null,
     });
   }
 

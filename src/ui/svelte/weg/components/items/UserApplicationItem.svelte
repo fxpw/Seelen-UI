@@ -68,6 +68,7 @@
     invoke(SeelenCommand.TriggerContextMenu, {
       menu: { ...getUserApplicationContextMenu($t, item, windows), alignX, alignY },
       forwardTo: null,
+      toggleSource: null,
     });
   }
 </script>

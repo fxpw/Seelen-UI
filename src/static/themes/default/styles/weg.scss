@@ -107,8 +107,7 @@
   --weg-item-attention-color: var(--slu-std-ui-hover-overlay);
 }
 
-.weg-item-overlay,
-.weg-item-drag-container[data-item-kind="Media"] > .media-session-container {
+.weg-item-overlay {
   position: relative;
 
   .taskbar[data-magnification="true"] & {
@@ -360,15 +359,28 @@
   }
 }
 
-.weg-item.media-session-container {
-  overflow: hidden;
+.weg-media-button {
+  color: var(--slu-std-fg-color);
+  &:disabled {
+    color: var(--slu-std-fg-muted-color);
+  }
+}
+
+.weg-media-cover {
   padding: 0;
 
-  &:active {
-    transform: none;
+  .media-session-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
-  .media-session {
-    overflow: hidden;
+  .media-session-app-icon {
+    position: absolute;
+    width: 25%;
+    height: 25%;
+    right: 5%;
+    bottom: 5%;
+    object-fit: contain;
   }
 }

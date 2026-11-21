@@ -20,7 +20,11 @@ context_menu:
   reorder_enable: Unlock taskbar
 media:
   label: Media Player
+  next_track: Next track
   not_playing: Nothing is playing
+  pause: Pause
+  play: Play
+  previous_track: Previous track
 show_desktop:
   label: Show Desktop
 start:

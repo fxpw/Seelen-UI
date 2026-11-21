@@ -20,19 +20,42 @@ export class Widget_4 extends Widget_3 {
    * by a newer one after each `await` and bail out.
    */
   private _visibilityToken = 0;
+  private _showRequested = false;
 
-  public async show(): Promise<void> {
+  /** Latest visibility intent, including an opening or closing animation still in progress. */
+  public get isShown(): boolean {
+    return this._showRequested;
+  }
+
+  /** Reserves the opening before asynchronous placement, so another click can cancel it. */
+  public async show(prepare?: () => Promise<void>): Promise<void> {
     const token = ++this._visibilityToken;
+    this._showRequested = true;
     debouncedClose.cancel();
-    await this.window.show();
-    // a hide() was called while showing, it already owns the attribute.
-    if (token === this._visibilityToken) {
-      delete globalThis.document.documentElement.dataset.widgetHidden;
+    try {
+      if (prepare) {
+        await prepare();
+        if (token !== this._visibilityToken) {
+          return;
+        }
+      }
+      await this.window.show();
+      // a hide() was called while showing, it already owns the attribute.
+      if (token === this._visibilityToken) {
+        delete globalThis.document.documentElement.dataset.widgetHidden;
+      }
+    } catch (error) {
+      if (token === this._visibilityToken) {
+        this._showRequested = false;
+        globalThis.document.documentElement.dataset.widgetHidden = "";
+      }
+      throw error;
     }
   }
 
   public async hide(): Promise<void> {
     const token = ++this._visibilityToken;
+    this._showRequested = false;
     globalThis.document.documentElement.dataset.widgetHidden = "";
 
     await this.waitHideAnimations();

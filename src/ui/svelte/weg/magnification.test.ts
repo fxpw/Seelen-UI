@@ -29,17 +29,32 @@ test("animation continues between input samples, rests when settled, freezes cli
     getBoundingClientRect: () => ({ left: 100, top: 100, width: 40, height: 40 }),
     querySelector: () => null,
   };
+  const mediaSlots = Array.from({ length: 4 }, (_, index) => {
+    const values = new Map<string, string>();
+    return {
+      ...item,
+      dataset: { itemKind: "Media" },
+      style: {
+        zIndex: "",
+        setProperty: (key: string, value: string) => values.set(key, value),
+        removeProperty: (key: string) => values.delete(key),
+      },
+      getBoundingClientRect: () => ({ left: 148 + index * 48, top: 100, width: 40, height: 40 }),
+      zoom: () => Number(values.get("--dock-zoom") ?? "1"),
+    };
+  });
+  const mediaGroup = { dataset: { itemKind: "Media" }, querySelectorAll: () => mediaSlots };
   const node = Object.assign(new EventTarget(), {
     dataset: {} as Record<string, string>,
     classList: { contains: (name: string) => name === "horizontal" },
-    getBoundingClientRect: () => ({ left: 100, right: 140, top: 100, bottom: 140 }),
+    getBoundingClientRect: () => ({ left: 100, right: 332, top: 100, bottom: 140 }),
     querySelector: (selector: string) =>
       selector === ".weg-items-container"
-        ? { clientWidth: 40 }
+        ? { clientWidth: 232 }
         : selector === ".weg-items"
-        ? { offsetWidth: 40 }
+        ? { offsetWidth: 232 }
         : null,
-    querySelectorAll: () => [item],
+    querySelectorAll: () => [item, mediaGroup],
   });
   const eventWindow = new EventTarget();
   class Observer {
@@ -86,9 +101,15 @@ test("animation continues between input samples, rests when settled, freezes cli
     for (let index = 0; index < 90; index++) tick();
     assert.equal(zoom(), 1.5);
     assert.equal(pending.size, 0);
+    for (const [index, slot] of mediaSlots.entries()) {
+      controller.approach(168 + index * 48, 120);
+      for (let tickIndex = 0; tickIndex < 90; tickIndex++) tick();
+      assert.equal(slot.zoom(), 1.5, "each media button gets the same maximum as an app");
+      assert.ok(mediaSlots.some((other) => other !== slot && other.zoom() < slot.zoom()));
+    }
     controller.approach(0, 0);
     tick();
-    assert.ok(zoom() > 1 && zoom() < 1.5);
+    assert.ok(mediaSlots[3]!.zoom() > 1 && mediaSlots[3]!.zoom() < 1.5);
     for (let index = 0; index < 90; index++) tick();
     assert.equal(properties.size, 0);
     assert.equal(pending.size, 0);
@@ -159,7 +180,7 @@ test("empty docks, disabled radius and menu cells remain stable", () => {
   assert.deepEqual(magnifyDock([{ center: 0, size: 40, magnifiable: false }], 0, 100), [{ scale: 1, offset: 0 }]);
 });
 
-test("wide media player grows gently, influences neighbors and preserves their gap", () => {
+test("custom scale and inset preserve gaps beside wide cells", () => {
   const withPlayer = [...cells, { center: 300, size: 160, magnifiable: true, maxScale: 1.2, inset: 60 }];
   const result = magnifyDock(withPlayer, 300, 160);
   assert.equal(result[5]!.scale, 1.2);

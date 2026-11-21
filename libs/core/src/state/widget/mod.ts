@@ -60,6 +60,9 @@ export class Widget extends WidgetBasics {
     initialized: false,
     ready: false,
   };
+  private popupTriggerToken = 0;
+  private popupTriggerSource: string | null = null;
+  private cancelFocusLossHide: () => void = () => {};
 
   private constructor(widget: IWidget) {
     super();
@@ -101,11 +104,23 @@ export class Widget extends WidgetBasics {
 
   /** Will apply the recommended settings for a popup widget */
   private applyPopupPreset(): void {
-    this.onTrigger(async ({ desiredPosition, alignX, alignY }) => {
-      if (desiredPosition) {
-        await this.adjustAndSetPosition(desiredPosition.x, desiredPosition.y, alignX, alignY);
+    this.onTrigger(async ({ desiredPosition, alignX, alignY, customArgs }) => {
+      const token = ++this.popupTriggerToken;
+      this.cancelFocusLossHide();
+      const source = typeof customArgs?.toggleSource === "string" ? customArgs.toggleSource : null;
+      if (customArgs?.toggle === true && this.isShown && source === this.popupTriggerSource) {
+        await this.hide();
+        return;
       }
-      await this.show();
+      this.popupTriggerSource = source;
+      await this.show(async () => {
+        if (desiredPosition) {
+          await this.adjustAndSetPosition(desiredPosition.x, desiredPosition.y, alignX, alignY);
+        }
+      });
+      if (token !== this.popupTriggerToken || !this.isShown) {
+        return;
+      }
       await this.focus();
       // After positioning, re-run the autosizer to correct any size discrepancy. The trigger
       // reads OPTIMISTIC_FRAME which may be stale: onResized events from prior async resizes
@@ -113,7 +128,7 @@ export class Widget extends WidgetBasics {
       // value. If the trigger then repositions with that stale size its SetSelfPosition call
       // lands in the Win32 queue after the correct resize, overwriting it. Running execute()
       // here detects the remaining diff and issues a corrective resize + position adjustment.
-      if (this.autoSize.enabled) {
+      if (token === this.popupTriggerToken && this.isShown && this.autoSize.enabled) {
         await this.executeAutoSize();
       }
     });
@@ -125,6 +140,7 @@ export class Widget extends WidgetBasics {
     const hideDelayed = debounce(() => {
       this.hide();
     }, 100);
+    this.cancelFocusLossHide = () => hideDelayed.cancel();
 
     subscribe(SeelenEvent.GlobalFocusChanged, ({ payload: focused }) => {
       if (focused.hwnd !== this.windowId && focused.ownerHwnd !== this.windowId) {

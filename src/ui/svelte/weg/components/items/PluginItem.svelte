@@ -90,6 +90,7 @@
     invoke(SeelenCommand.TriggerContextMenu, {
       menu: { ...menu, alignX, alignY },
       forwardTo: null,
+      toggleSource: null,
     });
   }
 

@@ -11,9 +11,8 @@ const widget = Widget.getCurrent();
 await widget.init({ hideOnFocusLoss: true });
 await widget.window.setFocusable(true);
 
-widget.onTrigger(async (args) => {
-  const visible = await widget.window.isVisible();
-  if (visible) {
+widget.onTrigger((args) => {
+  if (widget.isShown) {
     widget.hide();
   } else {
     onTriggered(args.desiredPosition);

@@ -27,5 +27,6 @@ export async function showWslMenu(t: (key: string) => string): Promise<void> {
       })),
     },
     forwardTo: null,
+    toggleSource: `${Widget.self.decoded.label}:wsl`,
   });
 }

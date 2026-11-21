@@ -20,6 +20,7 @@
         meta: state.data?.meta,
       },
       forwardTo: state.forwardTo || state.owner,
+      toggleSource: null,
     });
   }
 </script>

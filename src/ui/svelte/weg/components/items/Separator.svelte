@@ -23,6 +23,7 @@
     invoke(SeelenCommand.TriggerContextMenu, {
       menu: { ...getMenuForItem($t, item), alignX, alignY },
       forwardTo: null,
+      toggleSource: null,
     });
   }
 </script>

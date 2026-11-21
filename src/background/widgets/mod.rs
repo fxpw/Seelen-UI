@@ -45,6 +45,14 @@ use crate::{
 static PENDING_TRIGGERS: LazyLock<SyncHashMap<WidgetWebviewLabel, WidgetTriggerPayload>> =
     LazyLock::new(SyncHashMap::new);
 
+fn toggle_source(payload: &WidgetTriggerPayload) -> Option<&str> {
+    let args = payload.custom_args.as_ref()?;
+    if args.get("toggle")?.0.as_bool() != Some(true) {
+        return None;
+    }
+    args.get("toggleSource")?.0.as_str()
+}
+
 fn trigger_widget_inner(
     mut payload: WidgetTriggerPayload,
     owner_hwnd: Option<isize>,
@@ -104,7 +112,19 @@ fn trigger_widget_inner(
 
     if !WIDGET_MANAGER.is_ready(&label) {
         log::trace!("Trigger postponed, because widget instance is not ready: {label}");
-        PENDING_TRIGGERS.upsert(label.clone(), payload);
+        let cancelled = PENDING_TRIGGERS.with_lock(|pending| {
+            if let Some(source) = toggle_source(&payload)
+                && pending.get(&label).and_then(toggle_source) == Some(source)
+            {
+                pending.remove(&label);
+                return true;
+            }
+            pending.insert(label.clone(), payload);
+            false
+        });
+        if cancelled {
+            return Ok(());
+        }
 
         WIDGET_MANAGER.deployments.get(&label.widget_id, |c| {
             c.start_webview(&label);
@@ -220,6 +240,7 @@ impl crate::tauri_handlers::Handlers {
         webview: tauri::WebviewWindow,
         menu: ContextMenu,
         forward_to: Option<String>,
+        toggle_source: Option<String>,
     ) -> Result<()> {
         let owner = WidgetWebviewLabel::try_from_raw(webview.label())?;
         let owner_hwnd = webview.hwnd()?.0 as isize;
@@ -228,6 +249,11 @@ impl crate::tauri_handlers::Handlers {
         payload.instance_id = Some(menu.identifier);
         payload.align_x = menu.align_x;
         payload.align_y = menu.align_y;
+
+        if let Some(source) = toggle_source {
+            payload.add_custom_arg("toggle", true);
+            payload.add_custom_arg("toggleSource", source);
+        }
 
         payload.add_custom_arg("menu", serde_json::to_value(menu)?);
         payload.add_custom_arg("owner", serde_json::to_value(&owner.raw)?);

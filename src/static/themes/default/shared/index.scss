@@ -45,6 +45,8 @@
   }
 }
 
+@import "./motion.scss";
+
 // Accessibility Improvement
 *:focus-visible {
   outline-offset: 2px;

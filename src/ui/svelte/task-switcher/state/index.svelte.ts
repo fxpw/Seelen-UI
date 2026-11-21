@@ -3,6 +3,7 @@ import { debounce } from "lodash";
 import z from "zod";
 import { focusedWinId, previews, settings, widget, windows } from "./getters.svelte.ts";
 import { monitors } from "libs/ui/svelte/runes/monitors.svelte.ts";
+import { cycleTask, groupTasksByMonitor } from "../navigation.ts";
 
 export { focusedWinId, previews, settings, widget, windows };
 
@@ -50,13 +51,19 @@ let activeMonitor = $derived.by(() => {
 });
 
 // Windows shown in the switcher, optionally restricted to the active monitor
-let filteredWindows = $derived.by(() => {
+const candidateWindows = $derived.by(() => {
   const monitor = activeMonitor;
   if (!widgetConfig.onlyOnActiveMonitor || !monitor) {
     return windows.value;
   }
   return windows.value.filter((w) => w.monitor === monitor.id);
 });
+
+const monitorGroups = $derived(groupTasksByMonitor(
+  candidateWindows,
+  widgetConfig.onlyOnActiveMonitor && activeMonitor ? [activeMonitor] : monitors.all,
+));
+const filteredWindows = $derived(monitorGroups.flatMap((group) => group.windows));
 
 // Closing/killing a task must leave keyboard navigation on an existing window.
 $effect.root(() => {
@@ -107,6 +114,14 @@ class State {
 
   get activeMonitor() {
     return activeMonitor;
+  }
+
+  get monitorGroups() {
+    return monitorGroups;
+  }
+
+  navigate(direction: "next" | "previous", from: number | null = selectedWindow): void {
+    selectedWindow = cycleTask(filteredWindows, from, direction);
   }
 }
 
@@ -205,13 +220,8 @@ widget.onTrigger((payload) => {
   // Use the currently selected window when already showing, otherwise start from focused
   const currentHwnd = showing ? selectedWindow : focusedWinId.value;
 
-  let index = targetWindows.findIndex((w) => w.hwnd === currentHwnd);
-  if (direction === "next") {
-    if (index === -1) index = targetWindows.length - 1;
-    selectedWindow = targetWindows[(index + 1) % targetWindows.length]?.hwnd ?? null;
-  } else if (direction === "previous") {
-    if (index === -1) index = 0;
-    selectedWindow = targetWindows[(index - 1 + targetWindows.length) % targetWindows.length]?.hwnd ?? null;
+  if (direction === "next" || direction === "previous") {
+    selectedWindow = cycleTask(targetWindows, currentHwnd, direction);
   }
 
   showing = true;

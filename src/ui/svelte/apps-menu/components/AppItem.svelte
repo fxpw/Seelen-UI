@@ -50,6 +50,7 @@
     invoke(SeelenCommand.TriggerContextMenu, {
       menu,
       forwardTo: null,
+      toggleSource: null,
     });
   }
 

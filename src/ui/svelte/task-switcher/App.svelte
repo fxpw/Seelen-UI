@@ -8,16 +8,13 @@
     Widget.self.ready({ show: false });
   });
 
-  const box = $derived.by(() => {
-    const monitor = globalState.activeMonitor;
-    if (!monitor) {
-      return null;
-    }
-
+  const panels = $derived(globalState.monitorGroups.map(({ monitor, windows }) => {
     const { rect, scaleFactor } = monitor;
     const relativeRect = monitors.calculateDesktopRelativeRect(rect);
 
     return {
+      monitorId: monitor.id,
+      windows,
       x: relativeRect.left,
       y: relativeRect.top,
       // we reduce the size and later scale it, to get the correct display by dpi aware
@@ -25,7 +22,7 @@
       height: (rect.bottom - rect.top) / scaleFactor,
       scale: scaleFactor,
     };
-  });
+  }));
 </script>
 
 <div
@@ -37,9 +34,10 @@
   }}
   onkeypress={() => {}}
 >
-  {#if box}
+  {#each panels as box (box.monitorId)}
     <div
       class="task-switcher-monitor"
+      data-monitor-id={box.monitorId}
       style:position="fixed"
       style:left={box.x + "px"}
       style:top={box.y + "px"}
@@ -48,13 +46,15 @@
       style:transform={`scale(${box.scale})`}
       style:transform-origin="left top"
     >
-      <div class="task-switcher">
-        {#each globalState.windows as window, index (window.hwnd)}
-          <TaskItem task={window} {index} />
-        {/each}
-      </div>
+      {#if box.windows.length}
+        <div class="task-switcher">
+          {#each box.windows as window (window.hwnd)}
+            <TaskItem task={window} />
+          {/each}
+        </div>
+      {/if}
     </div>
-  {/if}
+  {/each}
 </div>
 
 <style>

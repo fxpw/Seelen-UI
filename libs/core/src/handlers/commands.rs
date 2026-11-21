@@ -342,7 +342,7 @@ slu_commands_declaration! {
     TriggerContextMenu =
         @webview()
         @fallible()
-        trigger_context_menu(menu: ContextMenu, forward_to: Option<String>),
+        trigger_context_menu(menu: ContextMenu, forward_to: Option<String>, toggle_source: Option<String>),
     TriggerDialog =
         @webview()
         @fallible()

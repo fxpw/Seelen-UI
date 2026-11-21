@@ -7,5 +7,6 @@ export function temperatureLabel(data, now = Date.now()) {
       ? `${Math.round(reading.temperature)}°`
       : "—";
   };
-  return `CPU ${format(data?.cpu)} · GPU ${format(data?.gpu)}`;
+  const gpu = `GPU ${format(data?.gpu)}`;
+  return data?.cpuEnabled === false ? gpu : `CPU ${format(data?.cpu)} · ${gpu}`;
 }

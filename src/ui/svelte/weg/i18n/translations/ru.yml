@@ -19,6 +19,10 @@ context_menu:
   reorder_disable: Заблокировать панель
   reorder_enable: Разблокировать панель
 media:
+  next_track: Следующий трек
+  pause: Пауза
+  play: Воспроизвести
+  previous_track: Предыдущий трек
   label: Медиаплеер
   not_playing: Ничего не играет
 show_desktop:

@@ -1,0 +1,53 @@
+// Animate the surfaces, keeping native window bounds, autosizing and DPI transforms intact.
+// Eight pixels fit within the popover's ten-pixel shadow margin.
+$opening-surfaces: ".slu-std-popover:not(.tooltip), .apps-menu, .power-popup, .task-switcher, .workspaces-viewer .workspaces, .workspaces-viewer .windows";
+$opening-easing: cubic-bezier(0.16, 1, 0.3, 1);
+
+:root:has(#{$opening-surfaces}) {
+  transition-duration: 240ms;
+  transition-timing-function: $opening-easing;
+
+  &[data-widget-hidden] {
+    transition-duration: 160ms;
+  }
+}
+
+:is(#{$opening-surfaces}) {
+  // Individual translate composes with existing transforms, including per-monitor DPI scaling.
+  translate: 0 0;
+  transition: translate 240ms $opening-easing;
+
+  // Also covers content first mounted after the window has become visible.
+  @starting-style {
+    translate: 0 8px;
+  }
+}
+
+:root[data-widget-hidden] :is(#{$opening-surfaces}) {
+  translate: 0 8px;
+  transition-duration: 160ms;
+}
+
+// Flyouts keep their native window visible and toggle their content instead.
+.flyout {
+  translate: 0 0;
+  transition: opacity 240ms $opening-easing, translate 240ms $opening-easing;
+
+  &[data-showing="false"] {
+    translate: 0 8px;
+    transition-duration: 160ms;
+  }
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  :is(#{$opening-surfaces}),
+  .flyout {
+    transition: none;
+  }
+}

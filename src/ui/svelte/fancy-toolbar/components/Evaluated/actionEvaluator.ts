@@ -1,6 +1,6 @@
 import { Alignment, FancyToolbarSide, type WidgetId } from "@seelen-ui/lib/types";
 import { toPhysicalPixels } from "libs/ui/react/utils/index.ts";
-import { invoke, SeelenCommand } from "@seelen-ui/lib";
+import { invoke, SeelenCommand, Widget } from "@seelen-ui/lib";
 import { settingsState } from "../../state/settings.svelte.ts";
 import { evalSanboxed, type SanboxedEval } from "libs/ui/svelte/utils/sandbox.ts";
 
@@ -70,6 +70,7 @@ function triggerWidget(widgetId: WidgetId, itemId: string): void {
       desiredPosition: { x, y },
       alignX: Alignment.Center,
       alignY: isTopPosition ? Alignment.Start : Alignment.End,
+      customArgs: { toggle: true, toggleSource: `${Widget.self.decoded.label}:${itemId}` },
     },
   });
 }

@@ -1,5 +1,5 @@
 import { Alignment, SeelenWegSide, type WidgetId } from "@seelen-ui/lib/types";
-import { invoke, SeelenCommand } from "@seelen-ui/lib";
+import { invoke, SeelenCommand, Widget } from "@seelen-ui/lib";
 import { settingsState } from "./state/settings.svelte.ts";
 import { evalSanboxed, type SanboxedEval } from "libs/ui/svelte/utils/sandbox.ts";
 
@@ -82,6 +82,7 @@ export function triggerWidget(widgetId: WidgetId, itemId: string): void {
       desiredPosition: { x, y },
       alignX,
       alignY,
+      customArgs: { toggle: true, toggleSource: `${Widget.self.decoded.label}:${itemId}` },
     },
   });
 }

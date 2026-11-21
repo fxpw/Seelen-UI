@@ -7,10 +7,9 @@
 
   interface Props {
     task: UserAppWindow;
-    index: number;
   }
 
-  let { task, index }: Props = $props();
+  let { task }: Props = $props();
 
   let boxRef: HTMLDivElement | undefined = $state();
   const isSelected = $derived(task.hwnd === globalState.selectedWindow);
@@ -20,7 +19,15 @@
   // Focus button when selected
   $effect(() => {
     if (isSelected && boxRef) {
-      boxRef.focus();
+      boxRef.focus({ preventScroll: true });
+      const panel = boxRef.closest<HTMLElement>(".task-switcher");
+      if (panel) {
+        const taskRect = boxRef.getBoundingClientRect();
+        const panelRect = panel.getBoundingClientRect();
+        const scale = panel.clientHeight > 0 ? panelRect.height / panel.clientHeight : 1;
+        if (taskRect.top < panelRect.top) panel.scrollTop -= (panelRect.top - taskRect.top) / scale;
+        if (taskRect.bottom > panelRect.bottom) panel.scrollTop += (taskRect.bottom - panelRect.bottom) / scale;
+      }
     }
   });
 
@@ -41,7 +48,7 @@
       const direction =
         e.key === "ArrowLeft" || (e.key === "Tab" && e.shiftKey) ? "previous" : "next";
 
-      navigateToItem(direction, index);
+      globalState.navigate(direction, task.hwnd);
     }
   }
 
@@ -77,33 +84,12 @@
     }
   }
 
-  // Navigation helper functions
-  function getNextIndex(currentIndex: number, totalItems: number): number {
-    return (currentIndex + 1) % totalItems;
-  }
-
-  function getPreviousIndex(currentIndex: number, totalItems: number): number {
-    return (currentIndex - 1 + totalItems) % totalItems;
-  }
-
-  function navigateToItem(direction: "next" | "previous", currentIndex: number): void {
-    const windows = globalState.windows;
-    const totalItems = windows.length;
-
-    if (totalItems === 0) return;
-
-    const nextIndex =
-      direction === "next"
-        ? getNextIndex(currentIndex, totalItems)
-        : getPreviousIndex(currentIndex, totalItems);
-
-    globalState.selectedWindow = windows[nextIndex]?.hwnd || null;
-  }
 </script>
 
 <div
   bind:this={boxRef}
   class="task"
+  data-selected={isSelected}
   role="button"
   tabindex="0"
   onkeydown={handleKeyDown}

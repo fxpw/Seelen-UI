@@ -10,7 +10,7 @@
   import { settingsState } from "../state/settings.svelte.ts";
   import { systemState } from "../state/system.svelte.ts";
   import { getWindowsForItem, windowsState } from "../state/windows.svelte.ts";
-  import { dockShouldBeHidden, setDockIsDraggingItem } from "../state/hidden.svelte.ts";
+  import { dockShouldBeHidden, setDockBounds, setDockIsDraggingItem, setPointerOverDock } from "../state/hidden.svelte.ts";
   import { getSeelenWegMenu } from "../dockMenu.ts";
   import { createDragDropManager } from "libs/ui/dnd.ts";
   import type { SwItem } from "../types.ts";
@@ -24,6 +24,28 @@
   onDestroy(() => manager.destroy());
 
   let magnifier = $state.raw<DockMagnifier | null>(null);
+  let dockElement = $state.raw<HTMLElement | null>(null);
+  function updateDockBounds() {
+    if (!dockElement) return;
+    const box = dockElement.getBoundingClientRect();
+    const root = dockElement.closest("#root");
+    const transform = new DOMMatrix(root ? getComputedStyle(root).transform : undefined);
+    const view = settingsState.widgetRect.webviewRect;
+    setDockBounds({
+      left: view.left + (box.left - transform.m41) * devicePixelRatio,
+      top: view.top + (box.top - transform.m42) * devicePixelRatio,
+      right: view.left + (box.right - transform.m41) * devicePixelRatio,
+      bottom: view.top + (box.bottom - transform.m42) * devicePixelRatio,
+    });
+  }
+  function trackDockBounds(node: HTMLElement) {
+    dockElement = node;
+    const observer = new ResizeObserver(updateDockBounds);
+    observer.observe(node);
+    updateDockBounds();
+    return () => { observer.disconnect(); dockElement = null; setDockBounds(null); };
+  }
+  $effect(() => { dockShouldBeHidden.value; updateDockBounds(); });
   function attachMagnifier(node: HTMLElement) {
     const instance = createDockMagnifier(node);
     magnifier = instance;
@@ -82,6 +104,7 @@
     invoke(SeelenCommand.TriggerContextMenu, {
       menu: { ...getSeelenWegMenu($t, cursor), alignX, alignY },
       forwardTo: null,
+      toggleSource: null,
     });
   }
 
@@ -101,6 +124,7 @@
 </script>
 
 <div
+  {@attach trackDockBounds}
   {@attach attachMagnifier}
   role="toolbar"
   tabindex="0"
@@ -110,6 +134,8 @@
   class:horizontal={isHorizontal}
   class:vertical={!isHorizontal}
   class:hidden={dockShouldBeHidden.value}
+  onpointerenter={() => setPointerOverDock(true)}
+  onpointerleave={() => setPointerOverDock(false)}
   oncontextmenu={onContextMenu}
 >
   <BackgroundByLayers />
